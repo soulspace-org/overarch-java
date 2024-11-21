@@ -1,5 +1,6 @@
 (ns org.soulspace.overarch.java.annotation-processor
-  (:require [clojure.string :as str])
+  (:require [clojure.string :as str]
+            [clojure.edn :as edn])
   (:import [javax.annotation.processing AbstractProcessor]
            [javax.lang.model SourceVersion]
            [javax.lang.model.element ElementKind]
@@ -58,6 +59,11 @@
   ;; Here you can add any additional processing logic, e.g., generating files
   )
 
+(defn write-model
+  "Writes model to file."
+  ([elements]
+   (spit "model.edn" elements)))
+
 (defn -process
   "Processes elements annotated with @OverarchNode."
   [this annotations round-env]
@@ -65,19 +71,24 @@
   (let [processing-env @(.state this)
         utils (.getElementUtils processing-env)
         elements (.getElementsAnnotatedWith round-env OverarchNode)]
-    (doseq [elem elements]
-      (when (= (.getKind elem) ElementKind/CLASS)
-        (let [anno (.getAnnotation elem OverarchNode)
-              el (keyword (.el anno))
-              id (if (seq (.id anno)) (.id anno) (.getQualifiedName elem))
-              name (if (seq (.name anno)) (.name anno) (.toString (.getSimpleName elem)))
-              ;name (if (seq (.name anno)) (.name anno) "")
-              desc (if (seq (.desc anno)) (.desc anno) (str/trim (.getDocComment utils elem)))
-              tech (if (seq (.tech anno)) (.tech anno) "Java")
-              node {:el el :id id :name name :desc desc :tech tech}]
-          ;(println "Annotation?" (type anno) anno)
-          ;(println "Element?" (type elem) elem)
-          (println node)
-        ;(process-element processing-env elem)
-        ))))
+    (letfn [(process-elements
+             [acc elements]
+             (if (seq elements)
+               (let [e (first elements)
+                     anno (.getAnnotation e OverarchNode)
+                     el (keyword (.el anno))
+                     id (if (seq (.id anno)) (.id anno) (.getQualifiedName e))
+                     name (if (seq (.name anno)) (.name anno) (.toString (.getSimpleName e)))
+                     desc (if (seq (.desc anno)) (.desc anno) (str/trim (.getDocComment utils e)))
+                     tech (if (seq (.tech anno)) (.tech anno) "Java")
+                     node {:el el :id id :name name :desc desc :tech tech}]
+                  ;(println "Annotation?" (type anno) anno)
+                  ;(println "Element?" (type elem) elem)
+                 (println node)
+                 (process-elements (conj acc node) (rest elements)))
+               acc))]
+      (->> elements
+           (process-elements #{})
+           (write-model)))
+    )
   true)
