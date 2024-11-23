@@ -71,8 +71,10 @@
   (let [processing-env @(.state this)
         utils (.getElementUtils processing-env)
         elements (.getElementsAnnotatedWith round-env OverarchNode)]
+    ; TODO convert to loop?
     (letfn [(process-elements
              [acc elements]
+             (println "acc:" acc)
              (if (seq elements)
                (let [e (first elements)
                      anno (.getAnnotation e OverarchNode)
@@ -85,7 +87,7 @@
                   ;(println "Annotation?" (type anno) anno)
                   ;(println "Element?" (type elem) elem)
                  (println node)
-                 (process-elements (conj acc node) (rest elements)))
+                 (recur (conj acc node) (rest elements)))
                acc))]
       (->> elements
            (process-elements #{})
