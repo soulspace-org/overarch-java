@@ -62,35 +62,43 @@
 (defn write-model
   "Writes model to file."
   ([elements]
-   (spit "model.edn" elements)))
+   (spit "model.edn"
+         (str "
+;;;;
+;;;; Overarch Model 
+;;;;
+"
+              elements))))
 
 (defn -process
   "Processes elements annotated with @OverarchNode."
   [this annotations round-env]
-  ;(println "process:" round-env)
-  (let [processing-env @(.state this)
-        utils (.getElementUtils processing-env)
-        elements (.getElementsAnnotatedWith round-env OverarchNode)]
-    ; TODO convert to loop?
-    (letfn [(process-elements
-             [acc elements]
-             (println "acc:" acc)
-             (if (seq elements)
-               (let [e (first elements)
-                     anno (.getAnnotation e OverarchNode)
-                     el (keyword (.el anno))
-                     id (if (seq (.id anno)) (.id anno) (.getQualifiedName e))
-                     name (if (seq (.name anno)) (.name anno) (.toString (.getSimpleName e)))
-                     desc (if (seq (.desc anno)) (.desc anno) (str/trim (.getDocComment utils e)))
-                     tech (if (seq (.tech anno)) (.tech anno) "Java")
-                     node {:el el :id id :name name :desc desc :tech tech}]
-                  ;(println "Annotation?" (type anno) anno)
-                  ;(println "Element?" (type elem) elem)
-                 (println node)
-                 (recur (conj acc node) (rest elements)))
-               acc))]
-      (->> elements
-           (process-elements #{})
-           (write-model)))
-    )
+  (println "process:" round-env)
+  (if (.processingOver round-env)
+    (println "processing over")
+    (let [processing-env @(.state this)
+          utils (.getElementUtils processing-env)
+          elements (.getElementsAnnotatedWith round-env OverarchNode)]
+      ; TODO convert to loop?
+      (letfn [(process-elements
+                [acc elements]
+                (println "acc:" acc)
+                (if (seq elements)
+                  (let [element (first elements)
+                        anno (.getAnnotation element OverarchNode)
+                        el (keyword (.el anno))
+                        id (if (seq (.id anno)) (.id anno) (.getQualifiedName element))
+                        name (if (seq (.name anno)) (.name anno) (.toString (.getSimpleName element)))
+                        desc (if (seq (.desc anno)) (.desc anno) (str/trim (.getDocComment utils element)))
+                        tech (if (seq (.tech anno)) (.tech anno) "Java")
+                        node {:el el :id id :name name :desc desc :tech tech}]
+                    ;(println "Annotation?" (type anno) anno)
+                    ;(println "Element?" (type elem) elem)
+                    (println node)
+                    (recur (conj acc node) (rest elements)))
+                  acc))]
+        (->> elements
+             (process-elements #{})
+             (write-model)))))
+  ; return true to claim the annotations and end the round
   true)
