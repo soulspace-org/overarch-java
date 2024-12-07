@@ -3,6 +3,7 @@ Overarch Java provides an annotation processor for the java compiler to generate
 
 *draft*
 
+[![Clojars Project](https://img.shields.io/clojars/v/org.soulspace/overarch-java.svg)](https://clojars.org/org.soulspace/overarch-java)
 ![GitHub](https://img.shields.io/github/license/soulspace-org/overarch-java)
 
 ## Build
