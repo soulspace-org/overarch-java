@@ -1,9 +1,10 @@
 # Overarch Java
-Overarch Java generates Overarch models from java sources by providing an
-annotation processor for the java compiler.
+Overarch Java provides an annotation processor for the java compiler to generate Overarch models from java sources.
+
+*draft*
 
 ## Usage
-Add the overarch-java and overarch-java-annotation dependencies to your project
+Add the `overarch-java` and `overarch-java-annotation` dependencies to your project
 and annotate your java sources with the overarch annotations.
 
 ## Copyright
