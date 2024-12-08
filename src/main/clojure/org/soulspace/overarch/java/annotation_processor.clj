@@ -45,7 +45,7 @@
   [this]
   javax.lang.model.SourceVersion/RELEASE_21)
 
-#_(defn log
+(defn log
   "Helper function to log messages to the processing environment."
   [processing-env msg]
   (-> processing-env
@@ -146,6 +146,19 @@
   ;
   )
 
+(def element-type-map
+  {"ANNOTATION_TYPE"  :annotation
+   "CLASS"            :class
+   "ENUM"             :enum
+   "ENUM_CONSTANT"    :enum-value
+   "FIELD"            :field
+   "INTERFACE"        :interface
+   "METHOD"           :method
+   "MODULE"           :component
+   "PACKAGE"          :package
+   "RECORD"           :class
+   "RECORD_COMPONENT" :field})
+
 (defn write-model
   "Writes model to file."
   ([elements]
@@ -160,40 +173,42 @@
 (defn -process
   "Processes elements annotated with @OverarchNode."
   [this annotations round-env]
-  (println "process:" round-env)
-  (if (.processingOver round-env)
-    (println "processing over")
-    (let [processing-env @(.state this)
-          utils (.getElementUtils processing-env)
-          elements (.getElementsAnnotatedWith round-env OverarchNode)]
-      ; TODO convert to loop?
-      (letfn [(process-elements
-                [acc elements]
+  ;(println "process:" round-env)
+  (let [processing-env @(.state this)
+        utils (.getElementUtils processing-env)]
+    (if (.processingOver round-env)
+      (log processing-env "processing over for Overarch annotations")
+      (let [elements (.getElementsAnnotatedWith round-env OverarchNode)]
+        ; TODO convert to loop?
+        (letfn [(process-elements
+                 [acc elements]
                 ;(println "acc:" acc)
-                (if (seq elements)
-                  (let [element (first elements)
-                        anno (.getAnnotation element OverarchNode)
-                        el (keyword (.el anno))
-                        id (if (seq (.id anno))
-                             (keyword (.id anno))
-                             (fqn->id (str (.getQualifiedName element))))
-                        name (if (seq (.name anno))
-                               (.name anno)
-                               (.toString (.getSimpleName element)))
-                        desc (if (seq (.desc anno))
-                               (.desc anno)
-                               (str/trim (.getDocComment utils element)))
-                        tech (if (seq (.tech anno)) (.tech anno) "Java")
-                        node {:el el :id id :name name :desc desc :tech tech}]
-                    (println node)
-                    ;(println "Annotation?" (type anno) anno)
-                    ;(println "Element?" (type elem) element)
-                    (println (.getEnclosingElement element))
-                    (println (.getEnclosedElements element))
-                    (recur (conj acc node) (rest elements)))
-                  acc))]
-        (->> elements
-             (process-elements #{})
-             (write-model)))))
+                 (if (seq elements)
+                   (let [element (first elements)
+                         anno (.getAnnotation element OverarchNode)
+                         el (if (seq (.el anno))
+                              (keyword (.el anno))
+                              (element-type-map (.name (.getKind element))))
+                         id (if (seq (.id anno))
+                              (keyword (.id anno))
+                              (fqn->id (str (.getQualifiedName element))))
+                         name (if (seq (.name anno))
+                                (.name anno)
+                                (.toString (.getSimpleName element)))
+                         desc (if (seq (.desc anno))
+                                (.desc anno)
+                                (str/trim (.getDocComment utils element)))
+                         tech (if (seq (.tech anno)) (.tech anno) "Java")
+                         node {:el el :id id :name name :desc desc :tech tech}]
+                      ;(println node)
+                      ;(println "Annotation?" (type anno) anno)
+                      ;(println "Element?" (type elem) element)
+                      ;(println (.getEnclosingElement element))
+                      ;(println (.getEnclosedElements element))
+                     (recur (conj acc node) (rest elements)))
+                   acc))]
+          (->> elements
+               (process-elements #{})
+               (write-model))))))
   ; return true to claim the annotations and end the round
   true)
