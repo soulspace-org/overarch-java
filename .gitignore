@@ -1,3 +1,6 @@
+## Clojure
+.nrepl-port
+
 ## Leiningen
 target/
 .lein-failures
@@ -20,4 +23,3 @@ bin/
 .project
 .settings/
 hs_err_pid*.log
-
