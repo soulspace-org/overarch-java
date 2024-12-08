@@ -52,13 +52,6 @@
       (.getMessager)
       (.printMessage Diagnostic$Kind/NOTE msg)))
 
-#_(defn process-element
-  "Process an individual element annotated with @OverarchNode."
-  [processing-env elem]
-  (log processing-env (str "Processing element: " (.getSimpleName elem)))
-  ;; Here you can add any additional processing logic, e.g., generating files
-  )
-
 (defn first-upper
   "Returns the string with the first letter converted to upper case."
   [s]
@@ -169,6 +162,13 @@
 ;;;;
 "
               elements))))
+
+#_(defn process-element
+    "Process an individual element annotated with @OverarchNode."
+    [processing-env elem]
+    (log processing-env (str "Processing element: " (.getSimpleName elem)))
+  ;; Here you can add any additional processing logic, e.g., generating files
+    )
 
 (defn -process
   "Processes elements annotated with @OverarchNode."
