@@ -1,4 +1,4 @@
-(defproject org.soulspace/overarch-java "0.1.0"
+(defproject org.soulspace/overarch-java "0.2.0-SNAPSHOT"
   :license {:name "Eclipse Public License"
             :url  "http://www.eclipse.org/legal/epl-v10.html"}
 
