@@ -14,6 +14,8 @@ For a local build and installation in the maven repository use
 lein install
 ```
 
+The annotation processor targets Java 21.
+
 ## Usage
 Add the clojars repo to your build, e.g for maven by adding this repository to the repositories in your `pom.xml`.
 ```xml
