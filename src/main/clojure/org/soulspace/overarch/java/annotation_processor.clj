@@ -1,7 +1,7 @@
 (ns org.soulspace.overarch.java.annotation-processor
   (:require [clojure.string :as str]
             [clojure.edn :as edn])
-  (:import [javax.annotation.processing AbstractProcessor Messenger ProcessingEnvironment]
+  (:import [javax.annotation.processing AbstractProcessor ProcessingEnvironment]
            [javax.lang.model SourceVersion]
            [javax.lang.model.util Elements]
            [javax.tools Diagnostic$Kind]
