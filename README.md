@@ -15,6 +15,14 @@ lein install
 ```
 
 ## Usage
+Add the clojars repo to your build, e.g for maven by adding this repository to the repositories in your `pom.xml`.
+```xml
+<repository>
+  <id>clojars.org</id>
+  <url>https://repo.clojars.org</url>
+</repository>
+```
+
 Add the `overarch-java` and `overarch-java-annotations` dependencies to your project
 and annotate your java sources with the overarch annotations.
 
