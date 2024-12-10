@@ -202,7 +202,7 @@
                                 (.toString (.getSimpleName element)))
                          desc (if (seq (.desc anno))
                                 (.desc anno)
-                                (str/trim (.getDocComment utils element)))
+                                (str/trim (str "" (.getDocComment utils element))))
                          tech (if (seq (.tech anno)) (.tech anno) "Java")
                          tags (if (seq (.tags anno)) (into #{} (.tags anno)) #{})
                          node {:el el :id id :name name :desc desc :tech tech :tags tags}]
