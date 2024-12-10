@@ -1,11 +1,9 @@
 (ns org.soulspace.overarch.java.annotation-processor
   (:require [clojure.string :as str]
             [clojure.edn :as edn])
-  (:import [javax.annotation.processing AbstractProcessor]
+  (:import [javax.annotation.processing AbstractProcessor Messanger ProcessingEnvironment]
            [javax.lang.model SourceVersion]
-           [javax.lang.model.element ElementKind]
            [javax.lang.model.util Elements]
-           [java.lang.reflect Proxy]
            [javax.tools Diagnostic$Kind]
            [org.soulspace.overarch.java OverarchNode])
   ; Generate the Processor class via AOT compilation
@@ -163,6 +161,8 @@
 "
               elements))))
 
+;; TODO multi method dispatched on the type/kind of the element
+
 #_(defn process-element
     "Process an individual element annotated with @OverarchNode."
     [processing-env elem]
@@ -170,16 +170,21 @@
   ;; Here you can add any additional processing logic, e.g., generating files
     )
 
+(defn children
+  "Returns the children of the `element`."
+  [element]
+  (.getEnclosedElements element))
+
 (defn -process
   "Processes elements annotated with @OverarchNode."
   [this annotations round-env]
   ;(println "process:" round-env)
-  (let [processing-env @(.state this)
-        utils (.getElementUtils processing-env)]
+  (let [^ProcessingEnvironment processing-env @(.state this)
+        ^Elements utils (.getElementUtils processing-env)]
     (if (.processingOver round-env)
       (log processing-env "processing over for Overarch annotations")
       (let [elements (.getElementsAnnotatedWith round-env OverarchNode)]
-        ; TODO convert to loop?
+        ; TODO convert to loop? convert to traverse with step-fn?
         (letfn [(process-elements
                  [acc elements]
                 ;(println "acc:" acc)
@@ -199,7 +204,8 @@
                                 (.desc anno)
                                 (str/trim (.getDocComment utils element)))
                          tech (if (seq (.tech anno)) (.tech anno) "Java")
-                         node {:el el :id id :name name :desc desc :tech tech}]
+                         tags (if (seq (.tags anno)) (into #{} (.tags anno)) #{})
+                         node {:el el :id id :name name :desc desc :tech tech :tags tags}]
                       ;(println node)
                       ;(println "Annotation?" (type anno) anno)
                       ;(println "Element?" (type elem) element)
