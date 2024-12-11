@@ -3,6 +3,7 @@
             [clojure.edn :as edn])
   (:import [javax.annotation.processing AbstractProcessor ProcessingEnvironment]
            [javax.lang.model SourceVersion]
+           [javax.lang.model.element Element]
            [javax.lang.model.util Elements]
            [javax.tools Diagnostic$Kind]
            [org.soulspace.overarch.java OverarchNode])
@@ -16,8 +17,11 @@
    ;:constructors {[] []}
    ))
 
-;; Define the annotations that this processor supports
+;;;
+;;; Annotation processor infrastructure
+;;;
 (def supported-annotations
+  "Defines the annotations that this processor supports."
   (doto (java.util.HashSet.)
     (.add "org.soulspace.overarch.java.OverarchNode")
     (.add "org.soulspace.overarch.java.OverarchRelation")))
@@ -25,13 +29,13 @@
 (defn -construct
   "Constructor"
   []
-  [[] (atom nil)]
+  [[] (atom {})]
   )
 
 (defn -init
   "Initialization for OverarchProcessor."
   ([this processing-env]
-   (reset! (.state this) processing-env)))
+   (reset! (.state this) {:processing-env processing-env})))
 
 (defn -getSupportedAnnotationTypes
   "Returns the set of supported annotation types."
@@ -41,7 +45,7 @@
 (defn -getSupportedSourceVersion
   "Returns the supported source version."
   [this]
-  javax.lang.model.SourceVersion/RELEASE_21)
+  SourceVersion/RELEASE_21)
 
 (defn log
   "Helper function to log messages to the processing environment."
@@ -50,14 +54,22 @@
       (.getMessager)
       (.printMessage Diagnostic$Kind/NOTE msg)))
 
+(defn processing-env
+  "Returns the processing environment from the processor state."
+  [this]
+  (:processing-env @(.state this)))
+
+;;;
+;;; String conversion
+;;;
 (defn first-upper
   "Returns the string with the first letter converted to upper case."
-  [s]
+  [^String s]
   (str (str/upper-case (subs s 0 1)) (subs s 1)))
 
 (defn first-lower
   "Returns the string with the first letter converted to lower case."
-  [s]
+  [^String s]
   (str (str/lower-case (subs s 0 1)) (subs s 1)))
 
 (defn from-camel-case
@@ -69,7 +81,7 @@
   * (from-camel-case \"fromCamelCase\" \\\\-) -> \"from-Camel-Case\"
   * (from-camel-case \"getHTTPRequest\" \\\\-) -> \"get-HTTP-Request\"
   "
-  [s ^Character c]
+  [^String s ^Character c]
   (loop [chars (seq s) r-chars [] start? true in-upper? false]
     (if (seq chars)
       (let [current-char (char (first chars))]
@@ -101,9 +113,9 @@
 (defn to-camel-case
   "Converts a string 's' into camel case. Removes occurences of 'c' and converts
   the next character to upper case."
-  ([s]
+  ([^String s]
    (to-camel-case s \-))
-  ([s c]
+  ([^String s ^Character c]
    (loop [chars (seq s) cc-chars []]
      (if (seq chars)
        (if (= (first chars) c)
@@ -113,17 +125,17 @@
 
 (defn fqn-namespace
   "Returns the namespace part of the fully qualified name `fqn`."
-  [fqn]
+  [^String fqn]
   (str/join "." (drop-last (str/split fqn #"\."))))
 
 (defn fqn-name
   "Returns the name part of the fully qualified name `fqn`."
-  [fqn]
+  [^String fqn]
   (last (str/split fqn #"\.")))
 
 (defn fqn->id
   "Returns an overarch id keyword for the fully qualified name `fqn`."
-  [fqn]
+  [^String fqn]
   (if-let [nspace (fqn-namespace fqn)]
     (keyword (str nspace "/" (str/lower-case (from-camel-case (fqn-name fqn) \-))))
     (keyword (str/lower-case (from-camel-case (fqn-name fqn) \-)))))
@@ -137,7 +149,20 @@
   ;
   )
 
-(def element-type-map
+;;;
+;;; Element handling
+;;;
+(defn parent
+  "Returns the children of the `element`."
+  [^Element element]
+  (.getEnclosingElement element))
+
+(defn children
+  "Returns the children of the `element`."
+  [element]
+  (.getEnclosedElements element))
+
+(def element-kind-map
   {"ANNOTATION_TYPE"  :annotation
    "CLASS"            :class
    "ENUM"             :enum
@@ -150,6 +175,118 @@
    "RECORD"           :class
    "RECORD_COMPONENT" :field})
 
+(defn element-kind
+  "Returns the kind of the `element`."
+  [element]
+  (.name (.getKind element)))
+
+(defn element-type
+  "Returns the overarch element type for this `element` and annotation `anno`."
+  ([element]
+   (element-kind-map (.name (.getKind element))))
+  ([element anno]
+   (if (seq (.el anno))
+     (keyword (.el anno))
+     (element-type element))))
+
+(defn element-id
+  "Returns the overarch element id for this `element` and annotation `anno`."
+  ([element]
+   (fqn->id (str (.getQualifiedName element))))
+  ([element anno]
+   (if (seq (.id anno))
+     (keyword (.id anno))
+     (element-id element))))
+
+(defn element-name
+  "Returns the overarch element name for this `element` and annotation `anno`."
+  ([element]
+   (str (.getSimpleName element)))
+  ([element anno]
+   (if (seq (.name anno))
+     (.name anno)
+     (element-name element))))
+
+(defn element-desc
+  "Returns the overarch element desc for this `element` and annotation `anno`."
+  ([element utils]
+   (str/trim (str "" (.getDocComment utils element))))
+  ([element anno utils]
+   (if (seq (.desc anno))
+     (.desc anno)
+     (element-desc element utils))))
+
+(defmulti process-element
+  "Returns the overarch elements for the given java `element`."
+  element-kind)
+
+(defmethod process-element "ANNOTATION_TYPE"
+  [element-kind element])
+
+(defmethod process-element "BINDING_VARIABLE"
+  [element-kind element])
+
+(defmethod process-element "CLASS"
+  [element-kind element])
+
+(defmethod process-element "CONSTRUCTOR"
+  [element-kind element])
+
+(defmethod process-element "ENUM"
+  [element-kind element])
+
+(defmethod process-element "ENUM_CONSTANT"
+  [element-kind element])
+
+(defmethod process-element "EXCEPTION_PARAMETER"
+  [element-kind element])
+
+(defmethod process-element "FIELD"
+  [element-kind element])
+
+(defmethod process-element "INSTANCE_INIT"
+  [element-kind element])
+
+(defmethod process-element "INTERFACE"
+  [element-kind element])
+
+(defmethod process-element "LOCAL_VARIABLE"
+  [element-kind element])
+
+(defmethod process-element "METHOD"
+  [element-kind element])
+
+(defmethod process-element "MODULE"
+  [element-kind element])
+
+(defmethod process-element "OTHER"
+  [element-kind element])
+
+(defmethod process-element "PACKAGE"
+  [element-kind element])
+
+(defmethod process-element "PARAMETER"
+  [element-kind element])
+
+(defmethod process-element "RECORD"
+  [element-kind element])
+
+(defmethod process-element "RECORD_COMPONENT"
+  [element-kind element])
+
+(defmethod process-element "RESOURCE_VARIABLE"
+  [element-kind element])
+
+(defmethod process-element "STATIC_INIT"
+  [element-kind element])
+
+(defmethod process-element "TYPE_PARAMETER"
+  [element-kind element])
+
+
+;;;
+;;; Model I/O
+;;;
 (defn write-model
   "Writes model to file."
   ([elements]
@@ -170,16 +307,10 @@
   ;; Here you can add any additional processing logic, e.g., generating files
     )
 
-(defn children
-  "Returns the children of the `element`."
-  [element]
-  (.getEnclosedElements element))
-
 (defn -process
   "Processes elements annotated with @OverarchNode."
   [this annotations round-env]
-  ;(println "process:" round-env)
-  (let [^ProcessingEnvironment processing-env @(.state this)
+  (let [^ProcessingEnvironment processing-env (:processing-env @(.state this))
         ^Elements utils (.getElementUtils processing-env)]
     (if (.processingOver round-env)
       (log processing-env "processing over for Overarch annotations")
@@ -187,28 +318,16 @@
         ; TODO convert to loop? convert to traverse with step-fn?
         (letfn [(process-elements
                  [acc elements]
-                ;(println "acc:" acc)
                  (if (seq elements)
                    (let [element (first elements)
                          anno (.getAnnotation element OverarchNode)
-                         el (if (seq (.el anno))
-                              (keyword (.el anno))
-                              (element-type-map (.name (.getKind element))))
-                         id (if (seq (.id anno))
-                              (keyword (.id anno))
-                              (fqn->id (str (.getQualifiedName element))))
-                         name (if (seq (.name anno))
-                                (.name anno)
-                                (.toString (.getSimpleName element)))
-                         desc (if (seq (.desc anno))
-                                (.desc anno)
-                                (str/trim (str "" (.getDocComment utils element))))
+                         el (element-type element anno)
+                         id (element-id element anno)
+                         name (element-name element anno)
+                         desc (element-desc element anno utils)
                          tech (if (seq (.tech anno)) (.tech anno) "Java")
                          tags (if (seq (.tags anno)) (into #{} (.tags anno)) #{})
                          node {:el el :id id :name name :desc desc :tech tech :tags tags}]
-                      ;(println node)
-                      ;(println "Annotation?" (type anno) anno)
-                      ;(println "Element?" (type elem) element)
                       ;(println (.getEnclosingElement element))
                       ;(println (.getEnclosedElements element))
                      (recur (conj acc node) (rest elements)))
