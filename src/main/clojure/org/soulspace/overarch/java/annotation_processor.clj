@@ -13,9 +13,10 @@
    :extends javax.annotation.processing.AbstractProcessor
    :state state
    :expose-methods []
-   :init construct
    ;:constructors {[] []}
-   ))
+   :init construct))
+
+(def state (atom {}))
 
 ;;;
 ;;; Annotation processor infrastructure
@@ -35,7 +36,8 @@
 (defn -init
   "Initialization for OverarchProcessor."
   ([this processing-env]
-   (reset! (.state this) {:processing-env processing-env})))
+   (reset! (.state this) {:processing-env processing-env})
+   (reset! state {:processing-env processing-env})))
 
 (defn -getSupportedAnnotationTypes
   "Returns the set of supported annotation types."
@@ -318,6 +320,20 @@
     )
 
 
+
+(defn traverse
+  "Recursively traverses the `coll` with the `children-fn` and transforms the elements with the `step-fn`."
+  [^ProcessingEnvironment processing-env
+    children-fn pred-fn step-fn coll]
+  (let [^Elements utils (.getElementUtils processing-env)]
+    (letfn [(trav [acc coll]
+            (if (seq coll)
+              (let [element (first coll)]
+                )
+              (step-fn acc)
+              ))])))
+
+
 (defn -process
   "Processes elements annotated with @OverarchNode."
   [this annotations round-env]
@@ -338,8 +354,6 @@
                                :desc (element-desc element anno utils)
                                :tech (if (seq (.tech anno)) (.tech anno) "Java")
                                :tags (if (seq (.tags anno)) (into #{} (.tags anno)) #{})}]
-                      ;(println (.getEnclosingElement element))
-                      ;(println (.getEnclosedElements element))
                      (recur (conj acc node) (rest elements)))
                    acc))]
           (->> elements
