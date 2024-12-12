@@ -152,6 +152,16 @@
 ;;;
 ;;; Element handling
 ;;;
+
+(defn overarch-annotations
+  "Returns the annotations of the `element`."
+  ([^Element element]
+   (overarch-annotations element #{"org.soulspace.overarch.java.OverarchNode"
+                                   "org.soulspace.overarch.java.OverarchRelation"})) 
+  ([^Element element annotation-types] 
+   (filter #(contains? annotation-types (.name %))
+           (.getAnnotationMirrors element))))
+
 (defn parent
   "Returns the children of the `element`."
   [^Element element]
@@ -307,6 +317,7 @@
   ;; Here you can add any additional processing logic, e.g., generating files
     )
 
+
 (defn -process
   "Processes elements annotated with @OverarchNode."
   [this annotations round-env]
@@ -321,13 +332,12 @@
                  (if (seq elements)
                    (let [element (first elements)
                          anno (.getAnnotation element OverarchNode)
-                         el (element-type element anno)
-                         id (element-id element anno)
-                         name (element-name element anno)
-                         desc (element-desc element anno utils)
-                         tech (if (seq (.tech anno)) (.tech anno) "Java")
-                         tags (if (seq (.tags anno)) (into #{} (.tags anno)) #{})
-                         node {:el el :id id :name name :desc desc :tech tech :tags tags}]
+                         node {:el (element-type element anno)
+                               :id (element-id element anno)
+                               :name (element-name element anno)
+                               :desc (element-desc element anno utils)
+                               :tech (if (seq (.tech anno)) (.tech anno) "Java")
+                               :tags (if (seq (.tags anno)) (into #{} (.tags anno)) #{})}]
                       ;(println (.getEnclosingElement element))
                       ;(println (.getEnclosedElements element))
                      (recur (conj acc node) (rest elements)))
