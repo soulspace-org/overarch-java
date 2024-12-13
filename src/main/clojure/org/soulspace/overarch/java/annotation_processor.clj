@@ -319,19 +319,33 @@
   ;; Here you can add any additional processing logic, e.g., generating files
     )
 
+(defn process-element?
+  "Returns true, if the `element` should be processed."
+  [element]
+  true)
 
+(defn transform-element
+  ""
+  ([] {:elements #{}
+       :visited #{}})
+  ([acc] (:elements acc))
+  ([acc element]
+   ))
 
 (defn traverse
   "Recursively traverses the `coll` with the `children-fn` and transforms the elements with the `step-fn`."
   [^ProcessingEnvironment processing-env
-    children-fn pred-fn step-fn coll]
+   children-fn pred-fn step-fn coll]
   (let [^Elements utils (.getElementUtils processing-env)]
     (letfn [(trav [acc coll]
-            (if (seq coll)
-              (let [element (first coll)]
-                )
-              (step-fn acc)
-              ))])))
+              (if (seq coll)
+                (let [element (first coll)
+                      visited (:visited acc)
+                      acc (assoc acc :visited (conj visited element))]
+                  (if (and (pred-fn element) (not (contains? visited element)))
+                    (recur (trav (step-fn acc element) (children-fn element)) (rest coll))
+                    (recur (trav acc (children-fn element)) (rest coll))))
+                (step-fn acc)))])))
 
 
 (defn -process
